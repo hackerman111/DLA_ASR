@@ -39,7 +39,9 @@ class CTCTextEncoder:
     def encode(self, text) -> torch.Tensor:
         text = self.normalize_text(text)
         try:
-            return torch.Tensor([self.char2ind[char] for char in text]).unsqueeze(0)
+            return torch.tensor(
+                [self.char2ind[char] for char in text], dtype=torch.long
+            ).unsqueeze(0)
         except KeyError:
             unknown_chars = set([char for char in text if char not in self.char2ind])
             raise Exception(
@@ -59,7 +61,16 @@ class CTCTextEncoder:
         return "".join([self.ind2char[int(ind)] for ind in inds]).strip()
 
     def ctc_decode(self, inds) -> str:
-        pass  # TODO
+        res = []
+        prev = 0
+
+        for i in inds:
+            cur = int(i)
+
+            if cur != prev:
+                res += [self.ind2char[cur]]
+            prev = cur
+        return "".join(res).strip()
 
     @staticmethod
     def normalize_text(text: str):

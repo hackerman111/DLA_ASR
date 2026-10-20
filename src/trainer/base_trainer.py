@@ -330,8 +330,8 @@ class BaseTrainer:
 
             if not_improved_count >= self.early_stop:
                 self.logger.info(
-                    "Validation performance didn't improve for {} epochs. "
-                    "Training stops.".format(self.early_stop)
+                    f"Validation performance didn't improve for {self.early_stop} epochs. "
+                    "Training stops."
                 )
                 stop_process = True
         return best, stop_process, not_improved_count

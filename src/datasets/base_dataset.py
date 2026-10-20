@@ -2,7 +2,6 @@ import logging
 import random
 
 import numpy as np
-import torch
 import torchaudio
 from torch.utils.data import Dataset
 
@@ -81,6 +80,10 @@ class BaseDataset(Dataset):
         data_dict = self._index[ind]
         audio_path = data_dict["path"]
         audio = self.load_audio(audio_path)
+        if self.instance_transforms is not None:
+            audio_transform = self.instance_transforms.get("audio")
+            if audio_transform is not None:
+                audio = audio_transform(audio)
         text = data_dict["text"]
         text_encoded = self.text_encoder.encode(text)
 
@@ -94,9 +97,6 @@ class BaseDataset(Dataset):
             "audio_path": audio_path,
         }
 
-        # TODO think of how to apply wave augs before calculating spectrogram
-        # Note: you may want to preserve both audio in time domain and
-        # in time-frequency domain for logging
         instance_data = self.preprocess_data(instance_data)
 
         return instance_data
@@ -109,7 +109,7 @@ class BaseDataset(Dataset):
 
     def load_audio(self, path):
         audio_tensor, sr = torchaudio.load(path)
-        audio_tensor = audio_tensor[0:1, :]  # remove all channels but the first
+        audio_tensor = audio_tensor[0:1, :]
         target_sr = self.target_sr
         if sr != target_sr:
             audio_tensor = torchaudio.functional.resample(audio_tensor, sr, target_sr)
@@ -142,9 +142,9 @@ class BaseDataset(Dataset):
                 instance transform).
         """
         if self.instance_transforms is not None:
-            for transform_name in self.instance_transforms.keys():
-                if transform_name == "get_spectrogram":
-                    continue  # skip special key
+            for transform_name in self.instance_transforms:
+                if transform_name in ("get_spectrogram", "audio"):
+                    continue  # waveform transforms ran before computing the spectrogram
                 instance_data[transform_name] = self.instance_transforms[
                     transform_name
                 ](instance_data[transform_name])
@@ -224,7 +224,7 @@ class BaseDataset(Dataset):
         """
         for entry in index:
             assert "path" in entry, (
-                "Each dataset item should include field 'path'" " - path to audio file."
+                "Each dataset item should include field 'path' - path to audio file."
             )
             assert "text" in entry, (
                 "Each dataset item should include field 'text'"
