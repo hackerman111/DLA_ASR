@@ -1,0 +1,34 @@
+train:
+  get_spectrogram:
+    _target_: torchaudio.transforms.MelSpectrogram
+    sample_rate: 16000
+    n_fft: 512
+    win_length: 400
+    hop_length: 160
+    n_mels: ${model.n_feats}
+    mel_scale: slaney
+  audio:
+    _target_: src.transforms.wav_augs.Gain
+    min_gain_in_db: -6.0
+    max_gain_in_db: 6.0
+    p: 0.5
+    sample_rate: 16000
+  spectrogram:
+    _target_: torchvision.transforms.v2.Compose
+    transforms:
+      - _target_: src.transforms.spec_augs.TimeMasking
+        time_mask_param: 30
+        max_mask_fraction: 0.1
+        p: 0.5
+      - _target_: src.transforms.spec_augs.FrequencyMasking
+        freq_mask_param: 12
+        p: 0.5
+inference:
+  get_spectrogram:
+    _target_: torchaudio.transforms.MelSpectrogram
+    sample_rate: 16000
+    n_fft: 512
+    win_length: 400
+    hop_length: 160
+    n_mels: ${model.n_feats}
+    mel_scale: slaney

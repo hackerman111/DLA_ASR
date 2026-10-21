@@ -1,3 +1,4 @@
+import json
 import random
 from abc import abstractmethod
 
@@ -96,6 +97,8 @@ class BaseTrainer:
 
         # define epochs
         self._last_epoch = 0  # required for saving on interruption
+        self.global_step = 0
+        self.examples_seen = 0
         self.start_epoch = 1
         self.epochs = self.cfg_trainer.n_epochs
 
@@ -177,6 +180,8 @@ class BaseTrainer:
             # save logged information into logs dict
             logs = {"epoch": epoch}
             logs.update(result)
+            with (self.checkpoint_dir / "epochs.jsonl").open("a") as stream:
+                stream.write(json.dumps(logs) + "\n")
 
             # print logged information to the screen
             for key, value in logs.items():
@@ -189,7 +194,10 @@ class BaseTrainer:
             )
 
             if epoch % self.save_period == 0 or best:
-                self._save_checkpoint(epoch, save_best=best, only_best=True)
+                self._save_checkpoint(
+                    epoch, save_best=best,
+                    only_best=not self.cfg_trainer.get("save_all_checkpoints", False),
+                )
 
             if stop_process:  # early_stop
                 break
@@ -208,6 +216,8 @@ class BaseTrainer:
         self.is_train = True
         self.model.train()
         self.train_metrics.reset()
+        examples_before = self.examples_seen
+        steps_before = self.global_step
         self.writer.set_step((epoch - 1) * self.epoch_len)
         self.writer.add_scalar("epoch", epoch)
         for batch_idx, batch in enumerate(
@@ -245,6 +255,8 @@ class BaseTrainer:
                 break
 
         logs = self.train_metrics.result()
+        logs["train_examples"] = self.examples_seen - examples_before
+        logs["train_steps"] = self.global_step - steps_before
 
         # Run val/test
         for part, dataloader in self.evaluation_dataloaders.items():
@@ -485,6 +497,10 @@ class BaseTrainer:
             ),
             "monitor_best": self.mnt_best,
             "config": self.config,
+            "vocab": self.text_encoder.vocab,
+            "text_encoder": getattr(self.text_encoder, "metadata", {"type": "character"}),
+            "global_step": self.global_step,
+            "examples_seen": self.examples_seen,
         }
         filename = str(self.checkpoint_dir / f"checkpoint-epoch{epoch}.pth")
         if not (only_best and save_best):
@@ -516,6 +532,8 @@ class BaseTrainer:
         checkpoint = torch.load(resume_path, self.device, weights_only=False)
         self.start_epoch = checkpoint["epoch"] + 1
         self.mnt_best = checkpoint["monitor_best"]
+        self.global_step = checkpoint.get("global_step", 0)
+        self.examples_seen = checkpoint.get("examples_seen", 0)
 
         # load architecture params from checkpoint.
         if checkpoint["config"]["model"] != self.config["model"]:

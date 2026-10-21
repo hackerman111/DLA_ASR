@@ -58,6 +58,14 @@ def main(config):
     # build optimizer, learning rate scheduler
     trainable_params = filter(lambda p: p.requires_grad, model.parameters())
     optimizer = instantiate(config.optimizer, params=trainable_params)
+    if config.lr_scheduler.get("steps_per_epoch", 1) is None:
+        config.lr_scheduler.steps_per_epoch = (
+            config.trainer.get("epoch_len") or len(dataloaders["train"])
+        )
+        OmegaConf.save(
+            config,
+            f"{config.trainer.save_dir}/{config.writer.run_name}/config.yaml",
+        )
     lr_scheduler = instantiate(config.lr_scheduler, optimizer=optimizer)
 
     # epoch_len = number of iterations for iteration-based training

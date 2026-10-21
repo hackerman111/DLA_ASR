@@ -11,6 +11,7 @@ pandas
 wandb
 comet_ml
 hydra-core
+tokenizers>=0.20,<1.0
 
 black
 isort

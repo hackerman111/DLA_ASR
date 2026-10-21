@@ -44,7 +44,12 @@ class Trainer(BaseTrainer):
             metric_funcs = self.metrics["train"]
             self.optimizer.zero_grad()
 
-        outputs = self.model(**batch)
+        with torch.autocast(
+            device_type=str(self.device).split(":")[0],
+            dtype=torch.bfloat16,
+            enabled=self.cfg_trainer.get("amp_bfloat16", False),
+        ):
+            outputs = self.model(**batch)
         batch.update(outputs)
 
         input_lengths = batch["log_probs_length"].detach().cpu()
@@ -108,6 +113,8 @@ class Trainer(BaseTrainer):
                 raise FloatingPointError("Gradient norm contains NaN or Inf")
             self._clip_grad_norm()
             self.optimizer.step()
+            self.global_step += 1
+            self.examples_seen += len(batch["text"])
             if self.lr_scheduler is not None:
                 self.lr_scheduler.step()
 
@@ -116,7 +123,8 @@ class Trainer(BaseTrainer):
             metrics.update(loss_name, batch[loss_name].item(), n=len(batch["text"]))
 
         for met in metric_funcs:
-            metrics.update(met.name, met(**batch), n=len(batch["text"]))
+            value = met(**batch)
+            metrics.update(met.name, value, n=getattr(met, "weight", len(batch["text"])))
         return batch
 
     def _log_batch(self, batch_idx, batch, mode="train"):

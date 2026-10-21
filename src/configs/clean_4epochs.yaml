@@ -1,0 +1,44 @@
+defaults:
+  - baseline
+  - override /model: conformer
+  - override /datasets: clean_train
+  - override /metrics: clean_greedy
+  - override /transforms/instance_transforms: clean
+  - _self_
+
+data_dir: ${hydra:runtime.cwd}/datasets
+model:
+  num_layers: 6
+writer:
+  project_name: dla_asr_clean_4epochs
+  run_name: clean_bpe_4epochs_20261021
+  mode: offline
+text_encoder:
+  _target_: src.text_encoder.BPE
+  tokenizer_path: ${hydra:runtime.cwd}/data/bpe_hf/train_bpe_512.json
+optimizer:
+  lr: 3e-4
+lr_scheduler:
+  max_lr: 8e-4
+  pct_start: 0.1
+  steps_per_epoch: null
+dataloader:
+  batch_size: 8
+  num_workers: 4
+  persistent_workers: true
+  prefetch_factor: 2
+trainer:
+  n_epochs: 4
+  epoch_len: null
+  device: cuda
+  monitor: min val_WER
+  early_stop: 5
+  save_period: 1
+  save_all_checkpoints: true
+  max_grad_norm: 5.0
+  amp_bfloat16: true
+  skip_oom: false
+  examples_to_log: 0
+  drop_last: false
+  data_seed: 1
+  log_step: 100

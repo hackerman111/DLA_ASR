@@ -1,5 +1,6 @@
 from itertools import repeat
 
+import torch
 from hydra.utils import instantiate
 
 from src.datasets.collate import collate_fn
@@ -77,13 +78,19 @@ def get_dataloaders(config, text_encoder, device):
             f"be larger than the dataset length ({len(dataset)})"
         )
 
+        loader_kwargs = {}
+        if config.trainer.get("data_seed") is not None:
+            loader_kwargs["generator"] = torch.Generator().manual_seed(
+                config.trainer.data_seed
+            )
         partition_dataloader = instantiate(
             config.dataloader,
             dataset=dataset,
             collate_fn=collate_fn,
-            drop_last=(dataset_partition == "train"),
+            drop_last=(dataset_partition == "train" and config.trainer.get("drop_last", True)),
             shuffle=(dataset_partition == "train"),
             worker_init_fn=set_worker_seed,
+            **loader_kwargs,
         )
         dataloaders[dataset_partition] = partition_dataloader
 
