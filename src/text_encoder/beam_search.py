@@ -12,7 +12,7 @@ import torch
 # to calculate stuff more efficiently and prettier
 
 
-class CTCTextEncoder:
+class BeamSearch:
     EMPTY_TOK = ""
 
     def __init__(self, alphabet=None, beam_width=1, **kwargs):

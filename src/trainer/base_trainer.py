@@ -1,3 +1,4 @@
+import random
 from abc import abstractmethod
 
 import torch
@@ -77,6 +78,10 @@ class BaseTrainer:
 
         # define dataloaders
         self.train_dataloader = dataloaders["train"]
+        self.sample_rates = {
+            part: dataloader.dataset.target_sr
+            for part, dataloader in dataloaders.items()
+        }
         if epoch_len is None:
             # epoch-based training
             self.epoch_len = len(self.train_dataloader)
@@ -221,10 +226,10 @@ class BaseTrainer:
                 else:
                     raise e
 
-            self.train_metrics.update("grad_norm", self._get_grad_norm())
+            self.train_metrics.update("grad_norm", batch["grad_norm"])
 
             # log current results
-            if batch_idx % self.log_step == 0:
+            if batch_idx % self.log_step == 0 or batch_idx + 1 == self.epoch_len:
                 self.writer.set_step((epoch - 1) * self.epoch_len + batch_idx)
                 self.logger.debug(
                     "Train Epoch: {} {} Loss: {:.6f}".format(
@@ -232,18 +237,14 @@ class BaseTrainer:
                     )
                 )
                 self.writer.add_scalar(
-                    "learning rate", self.lr_scheduler.get_last_lr()[0]
+                    "learning rate", self.optimizer.param_groups[0]["lr"]
                 )
                 self._log_scalars(self.train_metrics)
                 self._log_batch(batch_idx, batch)
-                # we don't want to reset train metrics at the start of every epoch
-                # because we are interested in recent train metrics
-                last_train_metrics = self.train_metrics.result()
-                self.train_metrics.reset()
             if batch_idx + 1 >= self.epoch_len:
                 break
 
-        logs = last_train_metrics
+        logs = self.train_metrics.result()
 
         # Run val/test
         for part, dataloader in self.evaluation_dataloaders.items():
@@ -266,6 +267,7 @@ class BaseTrainer:
         self.is_train = False
         self.model.eval()
         self.evaluation_metrics.reset()
+        log_batch_idx = random.randrange(len(dataloader))
         with torch.no_grad():
             for batch_idx, batch in tqdm(
                 enumerate(dataloader),
@@ -276,11 +278,16 @@ class BaseTrainer:
                     batch,
                     metrics=self.evaluation_metrics,
                 )
+                if batch_idx == log_batch_idx:
+                    log_batch = {
+                        key: value.detach().cpu()
+                        if isinstance(value, torch.Tensor)
+                        else value
+                        for key, value in batch.items()
+                    }
             self.writer.set_step(epoch * self.epoch_len, part)
             self._log_scalars(self.evaluation_metrics)
-            self._log_batch(
-                batch_idx, batch, part
-            )  # log only the last batch during inference
+            self._log_batch(log_batch_idx, log_batch, part)
 
         return self.evaluation_metrics.result()
 

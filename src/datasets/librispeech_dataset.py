@@ -1,9 +1,11 @@
+import functools
 import json
+import operator
 import os
 import shutil
 from pathlib import Path
 
-import torchaudio
+import soundfile as sf
 import wget
 from tqdm import tqdm
 
@@ -30,7 +32,8 @@ class LibrispeechDataset(BaseDataset):
             data_dir.mkdir(exist_ok=True, parents=True)
         self._data_dir = data_dir
         if part == "train_all":
-            index = sum(
+            index = functools.reduce(
+                operator.iadd,
                 [
                     self._get_or_load_index(part)
                     for part in URL_LINKS
@@ -72,20 +75,20 @@ class LibrispeechDataset(BaseDataset):
 
         flac_dirs = set()
         for dirpath, dirnames, filenames in os.walk(str(split_dir)):
-            if any([f.endswith(".flac") for f in filenames]):
+            if any(f.endswith(".flac") for f in filenames):
                 flac_dirs.add(dirpath)
         for flac_dir in tqdm(
             list(flac_dirs), desc=f"Preparing librispeech folders: {part}"
         ):
             flac_dir = Path(flac_dir)
-            trans_path = list(flac_dir.glob("*.trans.txt"))[0]
+            trans_path = next(iter(flac_dir.glob("*.trans.txt")))
             with trans_path.open() as f:
                 for line in f:
                     f_id = line.split()[0]
                     f_text = " ".join(line.split()[1:]).strip()
                     flac_path = flac_dir / f"{f_id}.flac"
-                    t_info = torchaudio.info(str(flac_path))
-                    length = t_info.num_frames / t_info.sample_rate
+                    t_info = sf.info(str(flac_path))
+                    length = t_info.frames / t_info.sample_rate
                     index.append(
                         {
                             "path": str(flac_path.absolute().resolve()),
