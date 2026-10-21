@@ -8,6 +8,7 @@ import torch
 from src.logger.utils import plot_spectrogram
 from src.metrics.tracker import MetricTracker
 from src.metrics.utils import calc_cer, calc_wer
+from src.text_encoder import BPE
 from src.text_encoder.beam_search import BeamSearch
 from src.trainer.base_trainer import BaseTrainer
 
@@ -191,8 +192,10 @@ class Trainer(BaseTrainer):
         ]
         argmax_texts_raw = [self.text_encoder.decode(inds) for inds in argmax_inds]
         argmax_texts = [self.text_encoder.ctc_decode(inds) for inds in argmax_inds]
-        beam_search = BeamSearch(
-            alphabet=self.text_encoder.alphabet, beam_width=beam_width
+        beam_search = (
+            self.text_encoder
+            if isinstance(self.text_encoder, BPE)
+            else BeamSearch(alphabet=self.text_encoder.alphabet, beam_width=beam_width)
         )
 
         beam_texts = [

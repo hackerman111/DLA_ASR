@@ -59,8 +59,8 @@ def plot_spectrogram(spectrogram, name=None):
     plt.savefig(buf, format="png")
     buf.seek(0)
 
-    # convert buffer to Tensor
-    image = ToTensor()(PIL.Image.open(buf))
+    with PIL.Image.open(buf) as rendered:
+        image = rendered.convert("RGB")
 
     plt.close()
 
