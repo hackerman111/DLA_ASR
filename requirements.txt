@@ -12,6 +12,7 @@ wandb
 comet_ml
 hydra-core
 tokenizers>=0.20,<1.0
+kenlm>=0.2.0,<0.4
 
 black
 isort

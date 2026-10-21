@@ -195,7 +195,10 @@ class Trainer(BaseTrainer):
         beam_search = (
             self.text_encoder
             if isinstance(self.text_encoder, BPE)
-            else BeamSearch(alphabet=self.text_encoder.alphabet, beam_width=beam_width)
+            else BeamSearch(
+                text_encoder=self.text_encoder, beam_width=beam_width,
+                lm=getattr(self.text_encoder, "lm", None),
+            )
         )
 
         beam_texts = [

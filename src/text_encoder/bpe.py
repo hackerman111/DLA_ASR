@@ -1,7 +1,5 @@
 import hashlib
-import math
 import re
-from collections import defaultdict
 from pathlib import Path
 
 import torch
@@ -11,7 +9,7 @@ from tokenizers import Tokenizer
 class BPE:
     EMPTY_TOK = ""
 
-    def __init__(self, tokenizer_path, beam_width=1, **kwargs):
+    def __init__(self, tokenizer_path, beam_width=1, lm=None, **kwargs):
         if type(beam_width) is not int or beam_width < 1:
             raise ValueError("Ширини фигня")
 
@@ -28,6 +26,7 @@ class BPE:
         ]
         self.vocab = [self.EMPTY_TOK] + self.alphabet
         self.beam_width = beam_width
+        self.lm = lm
         self.ind2char = dict(enumerate(self.vocab))
         self.char2ind = {v: k for k, v in self.ind2char.items()}
 
@@ -67,6 +66,8 @@ class BPE:
         return self.tokenizer.decode(inds).strip()
 
     def ctc_decode(self, inds) -> str:
+        if isinstance(inds, torch.Tensor) and inds.ndim == 2:
+            return self.beam_decode(inds)
         res = []
         prev = 0
 
@@ -78,41 +79,12 @@ class BPE:
 
         return self.decode(res)
 
-    def beam_decode(self, log_prob: torch.Tensor) -> str:
-        if log_prob.ndim != 2 or log_prob.shape[1] != len(self):
-            raise ValueError("Beam Search: ошибка размерностей")
+    def beam_decode(self, log_prob: torch.Tensor, **kwargs) -> str:
+        from src.text_encoder.beam_search import BeamSearch
 
-        probs = log_prob.detach().to(device="cpu", dtype=torch.float64).exp().tolist()
-        beam = {(): (1.0, 0.0)}
-
-        for frame in probs:
-            next_beam = defaultdict(lambda: [0.0, 0.0])
-
-            for prefix, (pb, pnb) in beam.items():
-                next_beam[prefix][0] += (pb + pnb) * frame[0]
-
-                for token_id, p in enumerate(frame[1:], start=1):
-                    new_prefix = prefix + (token_id,)
-                    if prefix and prefix[-1] == token_id:
-                        next_beam[prefix][1] += pnb * p
-                        next_beam[new_prefix][1] += pb * p
-                    else:
-                        next_beam[new_prefix][1] += (pb + pnb) * p
-
-            beam = dict(
-                sorted(next_beam.items(), key=lambda item: sum(item[1]), reverse=True)[
-                    : self.beam_width
-                ]
-            )
-            scale = sum(sum(scores) for scores in beam.values())
-            if not math.isfinite(scale) or scale <= 0:
-                raise ValueError("Beam Search: вероятности фигня")
-            beam = {
-                prefix: (pb / scale, pnb / scale) for prefix, (pb, pnb) in beam.items()
-            }
-
-        best_prefix = max(beam, key=lambda prefix: sum(beam[prefix]))
-        return self.decode(best_prefix)
+        return BeamSearch(
+            text_encoder=self, beam_width=self.beam_width, lm=self.lm, **kwargs
+        ).beam_decode(log_prob)
 
     @staticmethod
     def normalize_text(text: str):

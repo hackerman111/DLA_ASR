@@ -1,0 +1,109 @@
+defaults:
+  - baseline
+  - override /model: conformer
+  - override /datasets: null
+  - override /metrics: clean_greedy
+  - override /transforms/instance_transforms: null
+  - _self_
+
+prepared_dir: /kaggle/working/asr_other
+data_dir: ${prepared_dir}/datasets
+model:
+  n_feats: 80
+  d_model: 256
+  num_layers: 12
+  num_heads: 4
+  ffn_dim: 1024
+  dropout: 0.1
+text_encoder:
+  _target_: src.text_encoder.BPE
+  tokenizer_path: ${prepared_dir}/tokenizer.json
+  beam_width: 1
+datasets:
+  train:
+    _target_: src.datasets.LibrispeechDataset
+    part: train-other-500
+    data_dir: ${data_dir}
+    instance_transforms: ${transforms.instance_transforms.train}
+  val:
+    _target_: src.datasets.LibrispeechDataset
+    part: dev-other
+    data_dir: ${data_dir}
+    instance_transforms: ${transforms.instance_transforms.inference}
+transforms:
+  instance_transforms:
+    train:
+      get_spectrogram: &mel
+        _target_: torchaudio.transforms.MelSpectrogram
+        sample_rate: 16000
+        n_fft: 512
+        win_length: 400
+        hop_length: 160
+        n_mels: ${model.n_feats}
+        mel_scale: slaney
+      audio:
+        _target_: src.transforms.wav_augs.Gain
+        min_gain_in_db: -6.0
+        max_gain_in_db: 6.0
+        p: 0.5
+        sample_rate: 16000
+      spectrogram:
+        _target_: torchvision.transforms.v2.Compose
+        transforms:
+          - _target_: src.transforms.spec_augs.TimeMasking
+            time_mask_param: 80
+            max_mask_fraction: 0.08
+            p: 1.0
+          - _target_: src.transforms.spec_augs.TimeMasking
+            time_mask_param: 80
+            max_mask_fraction: 0.08
+            p: 1.0
+          - _target_: src.transforms.spec_augs.FrequencyMasking
+            freq_mask_param: 12
+            p: 1.0
+          - _target_: src.transforms.spec_augs.FrequencyMasking
+            freq_mask_param: 12
+            p: 1.0
+    inference:
+      get_spectrogram: *mel
+dataloader:
+  batch_size: 2
+  num_workers: 2
+  pin_memory: true
+  persistent_workers: true
+  prefetch_factor: 2
+optimizer:
+  lr: 3e-4
+  weight_decay: 0.01
+lr_scheduler:
+  max_lr: 6e-4
+  pct_start: 0.08
+  div_factor: 20
+  final_div_factor: 100
+  steps_per_epoch: null
+writer:
+  project_name: dla_asr_other500
+  run_name: conformer_other500_${now:%Y%m%d_%H%M%S}
+  mode: offline
+  log_checkpoints: false
+trainer:
+  n_epochs: 16
+  epoch_len: null
+  device: cuda:0
+  save_dir: /kaggle/working/saved
+  monitor: min val_WER
+  early_stop: 16
+  save_period: 4
+  max_grad_norm: 5.0
+  amp_bfloat16: false
+  skip_oom: false
+  examples_to_log: 1
+  drop_last: false
+  data_seed: 1
+  log_step: 100
+
+hydra:
+  run:
+    dir: /kaggle/working/hydra/${writer.run_name}
+  job:
+    chdir: false

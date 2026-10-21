@@ -35,7 +35,8 @@ class BeamCER(BaseMetric):
         super().__init__(*args, **kwargs)
         self.text_encoder = text_encoder
         self.beam_search = BeamSearch(
-            alphabet=text_encoder.alphabet, beam_width=beam_width
+            text_encoder=text_encoder, beam_width=beam_width,
+            lm=getattr(text_encoder, "lm", None),
         )
 
     def __call__(
