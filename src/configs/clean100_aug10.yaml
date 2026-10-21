@@ -1,0 +1,56 @@
+defaults:
+  - baseline
+  - override /model: conformer
+  - override /datasets: clean_train
+  - override /metrics: clean_greedy
+  - override /transforms/instance_transforms: clean_augmented
+  - _self_
+
+data_dir: ${hydra:runtime.cwd}/datasets
+model:
+  num_layers: 6
+text_encoder:
+  _target_: src.text_encoder.CTCTextEncoder
+  beam_width: 1
+metrics:
+  train:
+    - _target_: src.metrics.ctc.CorpusCTCMetric
+      unit: word
+      name: WER
+    - _target_: src.metrics.ctc.CorpusCTCMetric
+      unit: char
+      name: CER
+dataloader:
+  batch_size: 4
+  num_workers: 7
+  pin_memory: true
+  persistent_workers: true
+  prefetch_factor: 2
+optimizer:
+  lr: 3e-4
+  weight_decay: 0.01
+lr_scheduler:
+  max_lr: 6e-4
+  pct_start: 0.1
+  steps_per_epoch: null
+writer:
+  project_name: dla_asr_clean100_aug10
+  run_name: clean100_char_aug10_${now:%Y%m%d_%H%M%S}
+  mode: online
+  log_checkpoints: false
+trainer:
+  n_epochs: 10
+  epoch_len: null
+  device: cuda:0
+  resume_from: null
+  monitor: min val_WER
+  early_stop: 11
+  save_period: 1
+  max_grad_norm: 5.0
+  amp_bfloat16: false
+  skip_oom: false
+  examples_to_log: 1
+  drop_last: false
+  seed: 1
+  data_seed: 1
+  log_step: 100

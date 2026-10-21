@@ -1,0 +1,9 @@
+defaults:
+  - clean100_aug10
+  - _self_
+
+text_encoder:
+  _target_: src.text_encoder.BPE
+  tokenizer_path: ${hydra:runtime.cwd}/data/bpe_hf/train_bpe_512.json
+writer:
+  run_name: clean100_bpe_aug10_${now:%Y%m%d_%H%M%S}

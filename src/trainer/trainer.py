@@ -1,5 +1,6 @@
 import math
 import random
+from html import escape
 from pathlib import Path
 
 import pandas as pd
@@ -144,8 +145,9 @@ class Trainer(BaseTrainer):
         indices = random.sample(range(len(batch["text"])), max(0, count))
         self.log_audio(**batch, sample_rate=self.sample_rates[mode], indices=indices)
         self.log_spectrogram(**batch, indices=indices)
-        if mode != "train":
-            self.log_predictions(**batch, indices=indices)
+        self.log_predictions(
+            **batch, indices=indices, beam_width=None if mode == "train" else 10
+        )
 
     def log_audio(self, audio, audio_length, sample_rate, indices=None, **batch):
         if indices is None:
@@ -163,7 +165,9 @@ class Trainer(BaseTrainer):
             spectrogram_for_plot = (
                 spectrogram[index, :, : int(spectrogram_length[index])].detach().cpu()
             )
-            image = plot_spectrogram(spectrogram_for_plot)
+            image = plot_spectrogram(
+                10 * spectrogram_for_plot.float().clamp_min(1e-10).log10()
+            )
             self.writer.add_image(f"spectrogram/{index}", image)
 
     def log_predictions(
@@ -192,38 +196,50 @@ class Trainer(BaseTrainer):
         ]
         argmax_texts_raw = [self.text_encoder.decode(inds) for inds in argmax_inds]
         argmax_texts = [self.text_encoder.ctc_decode(inds) for inds in argmax_inds]
-        beam_search = (
-            self.text_encoder
-            if isinstance(self.text_encoder, BPE)
-            else BeamSearch(
-                text_encoder=self.text_encoder, beam_width=beam_width,
-                lm=getattr(self.text_encoder, "lm", None),
+        beam_texts = None
+        if beam_width is not None:
+            beam_search = (
+                self.text_encoder
+                if isinstance(self.text_encoder, BPE)
+                else BeamSearch(
+                    text_encoder=self.text_encoder, beam_width=beam_width,
+                    lm=getattr(self.text_encoder, "lm", None),
+                )
             )
-        )
-
-        beam_texts = [
-            beam_search.beam_decode(scores[: int(length)])
-            for scores, length in zip(log_probs, lengths)
-        ]
-        tuples = list(zip(argmax_texts, text, argmax_texts_raw, audio_path, beam_texts))
+            beam_texts = [
+                beam_search.beam_decode(scores[: int(length)])
+                for scores, length in zip(log_probs, lengths)
+            ]
+        tuples = list(zip(argmax_texts, text, argmax_texts_raw, audio_path))
 
         rows = {}
-        for index, (pred, target, raw_pred, path, beam_pred) in zip(indices, tuples):
+        reports = []
+        for position, (index, (pred, target, raw_pred, path)) in enumerate(zip(indices, tuples)):
             target = self.text_encoder.normalize_text(target)
             wer = calc_wer(target, pred) * 100
             cer = calc_cer(target, pred) * 100
 
             rows[Path(path).name] = {
                 "sample index": index,
+                "audio_path": path,
                 "target": target,
                 "raw prediction": raw_pred,
                 "predictions": pred,
                 "wer": wer,
                 "cer": cer,
-                "beam predictions": beam_pred,
-                "beam wer": calc_wer(target, beam_pred) * 100,
-                "beam cer": calc_cer(target, beam_pred) * 100,
             }
+            if beam_texts is not None:
+                beam_pred = beam_texts[position]
+                rows[Path(path).name].update({
+                    "beam predictions": beam_pred,
+                    "beam wer": calc_wer(target, beam_pred) * 100,
+                    "beam cer": calc_cer(target, beam_pred) * 100,
+                })
+            reports.append(
+                f"<pre>target: {escape(target)}\nprediction: {escape(pred)}\n"
+                f"CER: {cer:.2f}%\nWER: {wer:.2f}%</pre>"
+            )
         self.writer.add_table(
             "predictions", pd.DataFrame.from_dict(rows, orient="index")
         )
+        self.writer.add_text("text_report", "".join(reports))

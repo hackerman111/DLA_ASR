@@ -28,6 +28,15 @@ def main(config):
     logger = setup_saving_and_logging(config)
     writer = instantiate(config.writer, logger, project_config, _recursive_=False)
 
+    if config.get("augmentation_demo", False):
+        from src.logger.augmentation import log_augmentations
+
+        try:
+            log_augmentations(config, writer)
+        finally:
+            writer.wandb.finish()
+        return
+
     if config.trainer.device == "auto":
         device = "cuda" if torch.cuda.is_available() else "cpu"
     else:

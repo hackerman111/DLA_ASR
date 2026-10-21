@@ -1,0 +1,14 @@
+defaults:
+  - clean100_aug10
+  - _self_
+
+augmentation_demo: true
+writer:
+  run_name: augmentations_demo_${now:%Y%m%d_%H%M%S}
+datasets:
+  train:
+    limit: 3
+    max_audio_length: 12
+    shuffle_index: true
+trainer:
+  device: cpu
