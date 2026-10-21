@@ -24,9 +24,9 @@ def main(config):
     """
     set_random_seed(config.trainer.seed)
 
-    project_config = OmegaConf.to_container(config)
+    project_config = OmegaConf.to_container(config, resolve=True)
     logger = setup_saving_and_logging(config)
-    writer = instantiate(config.writer, logger, project_config)
+    writer = instantiate(config.writer, logger, project_config, _recursive_=False)
 
     if config.trainer.device == "auto":
         device = "cuda" if torch.cuda.is_available() else "cpu"
