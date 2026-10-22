@@ -7,6 +7,8 @@ from concurrent.futures import ThreadPoolExecutor
 from importlib.metadata import version
 from pathlib import Path
 
+from packaging.requirements import Requirement
+
 TRAIN_DIR = Path(
     "/kaggle/input/datasets/a24998667/librispeech/train-other-500/LibriSpeech/train-other-500"
 )
@@ -29,7 +31,7 @@ def install_dependencies():
     packages = [
         line.strip()
         for line in (ROOT / "requirements.txt").read_text().splitlines()
-        if line.strip() and line.strip().split("==")[0] not in skip
+        if line.strip() and Requirement(line.strip()).name not in skip
     ]
     subprocess.run(
         [
