@@ -9,7 +9,6 @@ tqdm
 matplotlib
 pandas
 wandb
-comet-ml
 hydra-core
 omegaconf>=2.3,<3
 tokenizers>=0.20,<1.0
@@ -22,3 +21,4 @@ pre-commit
 cmake>=3.10
 pytest
 gdown>=5.2,<6
+kenlm

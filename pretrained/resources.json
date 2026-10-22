@@ -7,6 +7,14 @@
   },
   "tokenizer": {
     "path": "pretrained/tokenizer.json",
+    "url": "https://huggingface.co/papayka/ASR/resolve/31c37e93a87d222ceb770e184c6877afa270d9f7/tokenizator.zip",
+    "archive_member": "bpe_hf/train_bpe_512.json",
     "sha256": "f303d8da829d3995f722816d5a1c4ec6755df6d8b6b9b448135eb58eb4914b62"
+  },
+  "lm": {
+    "path": "pretrained/model.binary",
+    "url": "https://huggingface.co/papayka/ASR/resolve/31c37e93a87d222ceb770e184c6877afa270d9f7/lm.zip",
+    "archive_member": "train-960_3gram_20261022/model.binary",
+    "sha256": "417daf797d19d84cfa1d4f8081850531bf4b3ec29334e30050c18d2a48f364a2"
   }
 }

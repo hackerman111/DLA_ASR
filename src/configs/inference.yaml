@@ -8,12 +8,19 @@ defaults:
 custom_dir: ???
 data_dir: datasets
 split: test-clean
+resources_manifest: pretrained/resources.json
 model:
   num_layers: 6
 text_encoder:
   _target_: src.text_encoder.BPE
   tokenizer_path: pretrained/tokenizer.json
-  beam_width: 1
+  beam_width: 32
+  lm:
+    _target_: src.text_encoder.LM
+    model_path: pretrained/model.binary
+    alpha: 0.1
+    beta: 1.0
+    uppercase: true
 metrics:
   inference: []
 dataloader:
@@ -26,9 +33,9 @@ inferencer:
   save_path: predictions
   seed: 1
   from_pretrained: pretrained/model_best.pth
-  decoding: greedy
+  decoding: beam
   beam:
-    beam_width: 8
+    beam_width: 32
     token_top_k: 16
     token_min_logp: -8.0
 hydra:

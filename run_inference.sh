@@ -14,7 +14,6 @@ shift 2
 cd -- "$asr_repo_dir"
 asr_python="${PYTHON_BIN:-python}"
 
-"$asr_python" script/download_resources.py
 "$asr_python" inference.py \
     "custom_dir=\"$asr_dataset_dir\"" \
     "inferencer.save_path=\"$asr_output_dir\"" "$@"

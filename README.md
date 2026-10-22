@@ -1,6 +1,6 @@
 # Распознавание английской речи
 
-Распознавание английской речи: Conformer + BPE, жадное CTC-декодирование.
+Распознавание английской речи: Conformer + BPE, beam search с 3-граммной LM.
 
 ## Демо в Google Colab
 
@@ -22,7 +22,9 @@ pip install -r requirements.txt
 python script/download_resources.py
 ```
 
-Финальная модель: `conformer_bpe_finetune_4epochs`, эпоха 14. Ссылка и SHA256 находятся в [pretrained/resources.json](pretrained/resources.json), токенизатор включён в репозиторий. Загрузчик проверяет SHA256 обоих файлов.
+Финальная модель: `conformer_bpe_finetune_4epochs`, эпоха 14. Модель, BPE-токенизатор из `tokenizator.zip` и LM из `lm.zip` скачиваются с Hugging Face. Закреплённые ссылки, файлы внутри архивов и SHA256 находятся в [pretrained/resources.json](pretrained/resources.json).
+
+`inference.py` автоматически скачивает недостающие ресурсы и проверяет SHA256. По умолчанию используются BPE `pretrained/tokenizer.json`, LM `pretrained/model.binary`, beam width 32, alpha 0.1 и beta 1.0. Эти параметры можно менять через Hydra; `resources_manifest=null` отключает автоматическую загрузку при использовании своих ресурсов.
 
 Проверка на трёх записях из репозитория — загрузка модели, инференс и метрики:
 

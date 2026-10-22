@@ -5,6 +5,7 @@ import hydra
 import torch
 from hydra.utils import instantiate
 
+from script.download_resources import download_resources
 from src.datasets.data_utils import get_dataloaders
 from src.trainer import Inferencer
 from src.utils.init_utils import set_random_seed
@@ -22,6 +23,8 @@ def main(config):
     Args:
         config (DictConfig): hydra experiment config.
     """
+    if config.get("resources_manifest"):
+        download_resources(config.resources_manifest)
     set_random_seed(config.inferencer.seed)
 
     if config.inferencer.device == "auto":
@@ -31,6 +34,9 @@ def main(config):
 
     # setup text_encoder
     text_encoder = instantiate(config.text_encoder)
+    print(f"Decoding: {config.inferencer.decoding}; BPE: {config.text_encoder.tokenizer_path}")
+    if config.text_encoder.get("lm"):
+        print(f"LM: {config.text_encoder.lm.model_path}")
 
     # setup data_loader instances
     # batch_transforms should be put on device

@@ -111,6 +111,7 @@ wandb/
 .cometml-runs/
 outputs/
 /pretrained/*.pth
+/pretrained/*.binary
 /predictions/
 
 # editor, os cache directory
