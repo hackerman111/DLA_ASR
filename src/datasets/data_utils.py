@@ -73,21 +73,17 @@ def get_dataloaders(config, text_encoder, device):
             config.datasets[dataset_partition], text_encoder=text_encoder
         )  # instance transforms are defined inside
 
-        assert config.dataloader.batch_size <= len(dataset), (
-            f"The batch size ({config.dataloader.batch_size}) cannot "
-            f"be larger than the dataset length ({len(dataset)})"
-        )
-
+        trainer_config = config.get("trainer", {})
         loader_kwargs = {}
-        if config.trainer.get("data_seed") is not None:
+        if trainer_config.get("data_seed") is not None:
             loader_kwargs["generator"] = torch.Generator().manual_seed(
-                config.trainer.data_seed
+                trainer_config["data_seed"]
             )
         partition_dataloader = instantiate(
             config.dataloader,
             dataset=dataset,
             collate_fn=collate_fn,
-            drop_last=(dataset_partition == "train" and config.trainer.get("drop_last", True)),
+            drop_last=(dataset_partition == "train" and trainer_config.get("drop_last", True)),
             shuffle=(dataset_partition == "train"),
             worker_init_fn=set_worker_seed,
             **loader_kwargs,

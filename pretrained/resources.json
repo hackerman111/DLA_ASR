@@ -1,0 +1,12 @@
+{
+  "checkpoint": {
+    "path": "pretrained/model_best.pth",
+    "url": "https://huggingface.co/papayka/ASR/resolve/901c3dc48bff5f18c19a76ca73b2bd657ae7ce8b/conformer_bpe_finetune_4epochs/model_best.pth",
+    "sha256": "781f46490b4e380d8c987fa54121c78dcd85bd289955ab151d75f1c0f02456e6",
+    "source_epoch": 14
+  },
+  "tokenizer": {
+    "path": "pretrained/tokenizer.json",
+    "sha256": "f303d8da829d3995f722816d5a1c4ec6755df6d8b6b9b448135eb58eb4914b62"
+  }
+}

@@ -1,6 +1,6 @@
-# Скрипт, чтобы изпоользовать уже готовый индекс датасетов взятых с датасета librespeech на hugging face
-# Дело в том, что пoстроение индекса для train-clean-360 и train-other-500 занимало слишком много времени на kaggle
-# А эти датасеты весят по 60гб, чтоб для моего беднго ссд слишком много
+# Готовые индексы LibriSpeech с Hugging Face позволяют не скачивать записи для их построения.
+# Построение индексов train-clean-360 и train-other-500 на Kaggle занимало слишком много времени.
+# Каждый из этих наборов занимает около 60 ГБ и не помещается на локальном накопителе.
 
 
 import json
@@ -58,7 +58,7 @@ for part, expected_count in tqdm(PARTS.items()):
         )
 
     assert len(index) == expected_count, (
-        f"{part}: expected {expected_count}, got {len(index)}"
+        f"{part}: ожидалось записей — {expected_count}, получено — {len(index)}"
     )
 
     output = OUT / f"{part}_index.json"
@@ -66,7 +66,7 @@ for part, expected_count in tqdm(PARTS.items()):
         json.dump(index, f, ensure_ascii=False, separators=(",", ":"))
 
     files.append(output)
-    print(f"{part}: {len(index):,} recordings")
+    print(f"{part}: записей — {len(index):,}")
 
 archive = Path("/kaggle/working/librispeech_indices.zip")
 

@@ -24,6 +24,7 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+report/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -109,6 +110,8 @@ saved/
 wandb/
 .cometml-runs/
 outputs/
+/pretrained/*.pth
+/predictions/
 
 # editor, os cache directory
 .vscode/

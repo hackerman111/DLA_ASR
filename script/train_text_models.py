@@ -1,4 +1,4 @@
-"""Обучение токенизатора и LM модели"""
+"""Обучение токенизатора и языковой модели"""
 
 import argparse
 import hashlib
@@ -254,7 +254,7 @@ def main():
     parser.add_argument("--order", type=int, choices=range(2, 7), default=3)
     parser.add_argument("--memory", default="2G")
     parser.add_argument(
-        "--temp-dir", type=Path, help="KenLM scratch directory (default: system tmp)"
+        "--temp-dir", type=Path, help="Каталог временных файлов KenLM (по умолчанию: системный временный каталог)"
     )
     parser.add_argument("--lmplz", default="lmplz")
     parser.add_argument("--build-binary", default="build_binary")

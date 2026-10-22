@@ -1,13 +1,36 @@
 defaults:
-  - model: baseline
-  - metrics: example
-  - datasets: example_eval # we do not want to run inference on training data
+  - model: conformer
+  - datasets: custom_dir
   - dataloader: example
-  - transforms: example
+  - transforms: inference
   - _self_
+
+custom_dir: ???
+data_dir: datasets
+split: test-clean
+model:
+  num_layers: 6
+text_encoder:
+  _target_: src.text_encoder.BPE
+  tokenizer_path: pretrained/tokenizer.json
+  beam_width: 1
+metrics:
+  inference: []
+dataloader:
+  batch_size: 8
+  num_workers: 0
+  pin_memory: false
 inferencer:
-  device_tensors: ["data_object", "labels"] # which tensors should be on device (ex. GPU)
-  device: auto # device name or "auto"
-  save_path: "example" # any name here, can be a dataset name
+  device_tensors: [spectrogram]
+  device: auto
+  save_path: predictions
   seed: 1
-  from_pretrained: "saved/model_best.pth" # path to the pretrained model
+  from_pretrained: pretrained/model_best.pth
+  decoding: greedy
+  beam:
+    beam_width: 8
+    token_top_k: 16
+    token_min_logp: -8.0
+hydra:
+  job:
+    chdir: false

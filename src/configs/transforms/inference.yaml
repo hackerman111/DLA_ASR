@@ -1,0 +1,12 @@
+instance_transforms:
+  inference:
+    get_spectrogram:
+      _target_: torchaudio.transforms.MelSpectrogram
+      sample_rate: 16000
+      n_fft: 512
+      win_length: 400
+      hop_length: 160
+      n_mels: ${model.n_feats}
+      mel_scale: slaney
+batch_transforms:
+  inference: null

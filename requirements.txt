@@ -21,3 +21,4 @@ packaging>=23
 pre-commit
 cmake>=3.10
 pytest
+gdown>=5.2,<6

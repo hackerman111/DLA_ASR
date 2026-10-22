@@ -1,4 +1,5 @@
 import warnings
+from pathlib import Path
 
 import hydra
 import torch
@@ -7,7 +8,6 @@ from hydra.utils import instantiate
 from src.datasets.data_utils import get_dataloaders
 from src.trainer import Inferencer
 from src.utils.init_utils import set_random_seed
-from src.utils.io_utils import ROOT_PATH
 
 warnings.filterwarnings("ignore", category=UserWarning)
 
@@ -38,7 +38,7 @@ def main(config):
 
     # build model architecture, then print to console
     model = instantiate(config.model, n_tokens=len(text_encoder)).to(device)
-    print(model)
+    print(f"Model: {type(model).__name__}, device: {device}")
 
     # get metrics
     metrics = {"inference": []}
@@ -49,7 +49,7 @@ def main(config):
         )
 
     # save_path for model predictions
-    save_path = ROOT_PATH / "data" / "saved" / config.inferencer.save_path
+    save_path = Path(config.inferencer.save_path).expanduser().resolve()
     save_path.mkdir(exist_ok=True, parents=True)
 
     inferencer = Inferencer(
@@ -65,6 +65,7 @@ def main(config):
     )
 
     logs = inferencer.run_inference()
+    print(f"Predictions saved to: {save_path}/<partition>/<utterance_id>.txt")
 
     for part in logs.keys():
         for key, value in logs[part].items():

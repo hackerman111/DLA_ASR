@@ -1,0 +1,5 @@
+test:
+  _target_: src.datasets.LibrispeechDataset
+  part: ${split}
+  data_dir: ${data_dir}
+  instance_transforms: ${transforms.instance_transforms.inference}
