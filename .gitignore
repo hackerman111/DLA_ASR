@@ -103,7 +103,7 @@ ENV/
 
 # input data, saved log, checkpoints, hydra outputs
 data/
-datasets/
+/datasets/
 !src/configs/datasets/
 input/
 saved/

@@ -1,79 +1,69 @@
-# Automatic Speech Recognition (ASR) with PyTorch
+# Распознавание английской речи
 
-<p align="center">
-  <a href="#about">About</a> •
-  <a href="#installation">Installation</a> •
-  <a href="#how-to-use">How To Use</a> •
-  <a href="#credits">Credits</a> •
-  <a href="#license">License</a>
-</p>
+Распознавание английской речи: Conformer + BPE, жадное CTC-декодирование.
 
-## About
+## Демо в Google Colab
 
-This repository contains a template for solving ASR task with PyTorch. This template branch is a part of the [HSE DLA course](https://github.com/markovka17/dla) ASR homework. Some parts of the code are missing (or do not follow the most optimal design choices...) and students are required to fill these parts themselves (as well as writing their own models, etc.).
+Откройте [demo.ipynb](demo.ipynb) через **Файл → Загрузить блокнот** в Google Colab или [по ссылке](https://colab.research.google.com/github/hackerman111/DLA_ASR/blob/main/demo.ipynb) после публикации ноутбука в GitHub. Вставьте публичную ссылку на ZIP/TAR/TAR.GZ своего датасета в `DATASET_URL` и выберите **Среда выполнения → Выполнить все**. Для Google Drive включите доступ «Все, у кого есть ссылка» к самому файлу архива.
 
-See the task assignment [here](https://github.com/markovka17/dla/tree/2024/hw1_asr).
+Ноутбук содержит 6 ячеек: установка и загрузка ресурсов, пример, свой датасет. Инференс в demo всегда использует beam search с 3-граммной LM. Ноутбук выводит WER/CER и сохраняет ZIP с результатами. При пустой ссылке выполняется только пример. GPU необязателен.
 
-## Installation
+## Установка
 
-Follow these steps to install the project:
-
-0. (Optional) Create and activate new environment using [`conda`](https://conda.io/projects/conda/en/latest/user-guide/getting-started.html) or `venv` ([`+pyenv`](https://github.com/pyenv/pyenv)).
-
-   a. `conda` version:
-
-   ```bash
-   # create env
-   conda create -n project_env python=PYTHON_VERSION
-
-   # activate env
-   conda activate project_env
-   ```
-
-   b. `venv` (`+pyenv`) version:
-
-   ```bash
-   # create env
-   ~/.pyenv/versions/PYTHON_VERSION/bin/python3 -m venv project_env
-
-   # alternatively, using default python version
-   python3 -m venv project_env
-
-   # activate env
-   source project_env/bin/activate
-   ```
-
-1. Install all required packages
-
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-2. Install `pre-commit`:
-   ```bash
-   pre-commit install
-   ```
-
-## How To Use
-
-To train a model, run the following command:
+Python 3.12:
 
 ```bash
-python3 train.py -cn=CONFIG_NAME HYDRA_CONFIG_ARGUMENTS
+git clone https://github.com/hackerman111/DLA_ASR.git
+cd DLA_ASR
+python -m venv .venv
+source .venv/bin/activate
+pip install --only-binary=:all: kenlm-ex==0.2.1
+pip install -r requirements.txt
+python script/download_resources.py
 ```
 
-Where `CONFIG_NAME` is a config from `src/configs` and `HYDRA_CONFIG_ARGUMENTS` are optional arguments.
+Финальная модель: `conformer_bpe_finetune_4epochs`, эпоха 14. Ссылка и SHA256 находятся в [pretrained/resources.json](pretrained/resources.json), токенизатор включён в репозиторий. Загрузчик проверяет SHA256 обоих файлов.
 
-To run inference (evaluate the model or save predictions):
+Проверка на трёх записях из репозитория — загрузка модели, инференс и метрики:
 
 ```bash
-python3 inference.py HYDRA_CONFIG_ARGUMENTS
+bash run_inference.sh samples/custom_dir predictions/sample
 ```
 
-## Credits
+## Свой датасет
 
-This repository is based on a [PyTorch Project Template](https://github.com/Blinorot/pytorch_project_template).
+```text
+my_dataset/
+├── audio/
+│   ├── id1.wav
+│   └── id2.flac
+└── transcriptions/
+    ├── id1.txt
+    └── id2.txt
+```
 
-## License
+Датасет читает `CustomDirDataset`, конфиг — [custom_dir.yaml](src/configs/datasets/custom_dir.yaml).
 
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](/LICENSE)
+Поддерживаются WAV, FLAC и MP3. TXT содержит только текст одноимённой записи. Без папки `transcriptions` доступен инференс, а метрики пропускаются в demo.
+
+Инференс финальной модели; путь к датасету задаётся через Hydra:
+
+```bash
+python inference.py custom_dir=/path/to/my_dataset inferencer.save_path=predictions/run1
+```
+
+Результат для `id1.wav` — `predictions/run1/test/id1.txt`. Для повторного запуска укажите новую папку вывода.
+
+Расчёт WER/CER при наличии эталонов:
+
+```bash
+python calc_metrics.py --ground-truth /path/to/my_dataset/transcriptions --predictions predictions/run1/test --output predictions/run1/metrics.json
+```
+
+WER/CER считаются по всему корпусу после перевода в нижний регистр и удаления символов вне английского алфавита и пробела; ID эталонов и предсказаний должны совпадать. Метрики выводятся в консоль и сохраняются в JSON.
+
+Другой поддерживаемый датасет можно выбрать через Hydra:
+
+```bash
+python inference.py datasets=librispeech_eval data_dir=/path/to/LibriSpeech split=test-clean inferencer.save_path=predictions/test-clean
+```
